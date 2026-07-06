@@ -1,0 +1,259 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>THE_EYES_KEEP_WATCHING</title>
+
+    <style>
+        :root {
+            --color-bg: #050404;
+            --color-accent: #ff0000;
+            --color-accent-dim: #4a0000;
+            --color-text: #707070;
+            --color-highlight: #dcdcdc;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            background-color: var(--color-bg);
+            color: var(--color-text);
+            font-family: 'Courier New', Courier, monospace;
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
+            min-height: 100vh; overflow: hidden; position: relative;
+        }
+
+        body::before {
+            content: " "; display: block; position: fixed; top: 0; left: 0; bottom: 0; right: 0;
+            background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.45) 50%), 
+                        linear-gradient(90deg, rgba(255, 0, 0, 0.04), rgba(0, 255, 0, 0.01), rgba(0, 0, 255, 0.04));
+            z-index: 10; background-size: 100% 4px, 6px 100%; pointer-events: none;
+        }
+
+        .vignette { position: fixed; top: 0; left: 0; width: 100%; height: 100%; box-shadow: inset 0 0 150px rgba(0,0,0,0.99); pointer-events: none; z-index: 5; }
+
+        #splash-screen {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: #000; z-index: 100;
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
+            transition: opacity 1.5s ease-out;
+        }
+
+        #splash-screen button {
+            background: transparent; border: 1px solid var(--color-accent-dim);
+            color: var(--color-accent); padding: 15px 30px; font-family: inherit;
+            font-size: 1.1rem; cursor: pointer; letter-spacing: 5px; box-shadow: 0 0 15px rgba(255,0,0,0.1); transition: all 0.3s ease;
+        }
+
+        #splash-screen button:hover { color: #fff; background-color: var(--color-accent-dim); box-shadow: 0 0 25px rgba(255,0,0,0.4); }
+
+        .container { z-index: 2; width: 100%; max-width: 600px; padding: 20px; text-align: center; display: flex; flex-direction: column; align-items: center; }
+
+        .grey-man-svg { 
+            width: 260px; height: 260px; filter: drop-shadow(0 0 20px rgba(0, 0, 0, 0.95)); margin-bottom: 20px; 
+            transition: transform 3s cubic-bezier(0.25, 1, 0.5, 1), filter 3s ease; animation: float 5s ease-in-out infinite; 
+        }
+        
+        @keyframes float { 0%, 100% { transform: translateY(0px) rotate(0deg); } 50% { transform: translateY(-6px) rotate(0.5deg); } }
+
+        .red-eye { fill: var(--color-accent); transition: transform 0.1s ease-out; transform-origin: center; }
+
+        .terminal-box { background-color: #000; border: 1px solid var(--color-accent-dim); padding: 20px; box-shadow: 0 0 25px rgba(0, 0, 0, 0.95); width: 100%; transition: opacity 1s ease, transform 1s ease; }
+
+        .tab-nav { display: flex; justify-content: center; gap: 30px; margin-bottom: 25px; }
+        .tab-btn { color: var(--color-text); cursor: pointer; border-bottom: 1px solid transparent; text-transform: uppercase; font-size: 0.8rem; letter-spacing: 2px; transition: all 0.2s; }
+        .tab-btn.active { color: var(--color-accent); border-bottom-color: var(--color-accent); }
+        .tab-content { display: none; }
+        .tab-content.active { display: block; }
+
+        .alphabet-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px; margin-bottom: 15px; font-size: 0.8rem; color: #555; text-align: center; }
+        .alphabet-item { border: 1px solid #1a1a1a; padding: 4px; background: #030303; }
+        .alphabet-item span { color: var(--color-accent); font-weight: bold; }
+
+        input[type="text"] { background: transparent; border: none; border-bottom: 1px solid var(--color-accent-dim); color: var(--color-highlight); font-family: inherit; font-size: 1.1rem; outline: none; width: 85%; text-align: center; margin-bottom: 15px; letter-spacing: 2px; }
+        button.action-btn { background: transparent; border: 1px solid var(--color-accent-dim); color: var(--color-text); padding: 7px 20px; cursor: pointer; text-transform: uppercase; letter-spacing: 2px; transition: all 0.3s; }
+        button.action-btn:hover { background-color: var(--color-accent-dim); color: #fff; }
+
+        .cipher-text { font-size: 1.2rem; letter-spacing: 3px; color: var(--color-highlight); margin: 20px 0; word-break: break-all; }
+
+        #speaking-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: 15; flex-direction: column; align-items: center; justify-content: flex-end; padding-bottom: 10vh; pointer-events: none; }
+        #speech-bubble { background-color: rgba(5, 4, 4, 0.95); border: 1px solid var(--color-accent); color: #fff; padding: 20px; width: 85%; max-width: 500px; box-shadow: 0 0 35px rgba(255, 0, 0, 0.2); font-size: 1.05rem; line-height: 1.6; text-align: left; letter-spacing: 1.5px; opacity: 0; transition: opacity 0.5s ease; pointer-events: auto; display: flex; flex-direction: column; gap: 15px; }
+
+        #translation-container { display: flex; gap: 10px; width: 100%; margin-top: 10px; }
+        #translation-input { flex-grow: 1; background: transparent; border: none; border-bottom: 1px solid var(--color-accent); color: #fff; font-family: inherit; font-size: 1rem; outline: none; letter-spacing: 2px; text-align: left; margin: 0; width: auto; }
+
+        .zoom-in { transform: scale(2.5) translateY(35px) !important; filter: drop-shadow(0 0 30px rgba(255, 0, 0, 0.9)) !important; animation: violent-shake 0.1s infinite !important; }
+        @keyframes violent-shake { 0%, 100% { transform: scale(2.5) translateY(35px) translate(0, 0); } 25% { transform: scale(2.5) translateY(35px) translate(-2px, 2px); } 50% { transform: scale(2.5) translateY(35px) translate(2px, -2px); } 75% { transform: scale(2.5) translateY(35px) translate(-2px, -2px); } }
+        .shake { animation: wall-shake 0.12s infinite; }
+        @keyframes wall-shake { 0%, 100% { transform: translate(0, 0); } 50% { transform: translate(-3px, 3px); } }
+    </style>
+</head>
+<body>
+
+    <div id="splash-screen">
+        <button onclick="initializeAudio()">ENTRAR AL ABISMO</button>
+    </div>
+
+    <div class="vignette"></div>
+
+    <div class="container" id="main-container">
+        <svg class="grey-man-svg" id="vigilante" viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
+            <g id="body">
+                <polygon points="100,115 80,105 65,105" fill="#2d1a12" />
+                <polygon points="100,115 65,105 85,145" fill="#442517" />
+                <polygon points="100,115 85,145 115,145" fill="#351b10" />
+                <polygon points="100,115 115,145 135,105" fill="#241209" />
+                <polygon points="100,115 135,105 120,105" fill="#1b0c05" />
+                <polygon points="65,105 50,140 85,145" fill="#3a1f14" />
+                <polygon points="50,140 42,165 85,145" fill="#2d150c" />
+                <polygon points="135,105 150,140 115,145" fill="#1f0e06" />
+                <polygon points="150,140 158,165 115,145" fill="#140803" />
+                <polygon points="85,145 70,190 100,190" fill="#321a10" />
+                <polygon points="115,145 130,190 100,190" fill="#140803" />
+                <polygon points="85,145 115,145 100,190" fill="#241209" />
+            </g>
+            <g id="head">
+                <polygon id="face-top" points="100,30 115,48 85,48" fill="#bcbcbc" />
+                <polygon id="face-r1" points="100,30 125,40 115,48" fill="#969696" />
+                <polygon id="face-l1" points="100,30 85,48 75,40" fill="#d4d4d4" />
+                <polygon id="face-l2" points="75,40 85,48 70,60" fill="#848484" />
+                <polygon id="face-r2" points="125,40 130,60 115,48" fill="#727272" />
+                <polygon id="face-l3" points="85,48 95,65 70,60" fill="#a5a5a5" />
+                <polygon id="face-r3" points="115,48 130,60 105,65" fill="#a8a8a8" />
+                <polygon id="face-mid" points="85,48 115,48 105,65 95,65" fill="#c4c4c4" />
+                <polygon id="face-nose" points="95,65 105,65 100,90" fill="#e2e2e2" />
+                <polygon id="face-l4" points="70,60 95,65 80,80" fill="#919191" />
+                <polygon id="face-l5" points="70,60 80,80 100,90" fill="#707070" />
+                <polygon id="face-r4" points="130,60 105,65 120,80" fill="#b6b6b6" />
+                <polygon id="face-r5" points="130,60 120,80 100,90" fill="#808080" />
+                <polygon id="face-chin-l" points="80,80 100,90 95,65" fill="#aaaaaa" />
+                <polygon id="face-chin-r" points="120,80 100,90 105,65" fill="#9b9b9b" />
+                <g id="left-eye-container"><rect id="left-eye" class="red-eye" x="87" y="52" width="6" height="6" /></g>
+                <g id="right-eye-container"><rect id="right-eye" class="red-eye" x="107" y="52" width="6" height="6" /></g>
+            </g>
+        </svg>
+
+        <div class="terminal-box" id="terminal">
+            <div class="tab-nav">
+                <span class="tab-btn active" onclick="showTab(1)">CODEX</span>
+                <span class="tab-btn" onclick="showTab(2)">VALIDACIÓN</span>
+            </div>
+
+            <div id="tab1" class="tab-content active">
+                <div class="alphabet-grid">
+                    <div class="alphabet-item">A <span>✦</span></div><div class="alphabet-item">C <span>◇</span></div><div class="alphabet-item">D <span>⊕</span></div><div class="alphabet-item">E <span>☉</span></div><div class="alphabet-item">G <span>⌬</span></div>
+                    <div class="alphabet-item">H <span>⌖</span></div><div class="alphabet-item">I <span>◉</span></div><div class="alphabet-item">K <span>✶</span></div><div class="alphabet-item">L <span>⊔</span></div><div class="alphabet-item">N <span>☊</span></div>
+                    <div class="alphabet-item">O <span>⬡</span></div><div class="alphabet-item">P <span>△</span></div><div class="alphabet-item">R <span>⊗</span></div><div class="alphabet-item">S <span>✧</span></div><div class="alphabet-item">T <span>☿</span></div>
+                    <div class="alphabet-item">V <span>⋈</span></div><div class="alphabet-item">W <span>☲</span></div><div class="alphabet-item">X <span>⌯</span></div><div class="alphabet-item">Y <span>☰</span></div><div class="alphabet-item">_ <span>╳</span></div>
+                </div>
+                <div class="cipher-text" id="raw-symbols">⌬⊂⊗╳⊗⊔⊗⚑╳⌯⊗⊗◇╳☍☊⌬△⊂⋈✦☿</div>
+            </div>
+
+            <div id="tab2" class="tab-content">
+                <input type="text" id="arg-input" placeholder="CÓDIGO (LETRAS O SÍMBOLOS)" autocomplete="off" />
+                <br>
+                <button class="action-btn" onclick="checkAnswer()">PROCESAR</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="speaking-overlay">
+        <div id="speech-bubble">
+            <div id="typewriter-text"></div>
+            <div id="translation-container" style="display: none;">
+                <input type="text" id="translation-input" placeholder="TRADUCCIÓN..." autocomplete="off">
+                <button class="action-btn" onclick="verifyTranslation()">ENVIAR</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let audioCtx, eyeInterval;
+        const originalPolygons = { 'face-top': '100,30 115,48 85,48', 'face-r1': '100,30 125,40 115,48', 'face-l1': '100,30 85,48 75,40', 'face-l2': '75,40 85,48 70,60', 'face-r2': '125,40 130,60 115,48', 'face-l3': '85,48 95,65 70,60', 'face-r3': '115,48 130,60 105,65', 'face-mid': '85,48 115,48 105,65 95,65', 'face-nose': '95,65 105,65 100,90', 'face-l4': '70,60 95,65 80,80', 'face-l5': '70,60 80,80 100,90', 'face-r4': '130,60 105,65 120,80', 'face-r5': '130,60 120,80 100,90', 'face-chin-l': '80,80 100,90 95,65', 'face-chin-r': '120,80 100,90 105,65' };
+
+        function playCreepyClick() { if (!audioCtx) return; const buf = audioCtx.createBuffer(1, audioCtx.sampleRate * 0.05, audioCtx.sampleRate); for (let i = 0; i < buf.length; i++) buf.getChannelData(0)[i] = Math.random() * 2 - 1; const n = audioCtx.createBufferSource(); n.buffer = buf; const g = audioCtx.createGain(); g.gain.value = 0.05; n.connect(g); g.connect(audioCtx.destination); n.start(); }
+        function playScreechEffect() { if (!audioCtx) return; const o = audioCtx.createOscillator(); const v = audioCtx.createGain(); o.frequency.value = 100; o.frequency.exponentialRampToValueAtTime(25, audioCtx.currentTime + 1.2); v.gain.value = 0.2; v.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 1.5); o.connect(v); v.connect(audioCtx.destination); o.start(); o.stop(audioCtx.currentTime + 1.6); }
+
+        function initializeAudio() {
+            document.getElementById('splash-screen').style.opacity = '0';
+            setTimeout(() => document.getElementById('splash-screen').style.display = 'none', 1500);
+            if (audioCtx) return;
+            audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            const d1 = audioCtx.createOscillator(); const d2 = audioCtx.createOscillator(); const g = audioCtx.createGain();
+            d1.type = 'sawtooth'; d1.frequency.value = 50; d2.type = 'triangle'; d2.frequency.value = 50.5; g.gain.value = 0.05;
+            d1.connect(g); d2.connect(g); g.connect(audioCtx.destination); d1.start(); d2.start();
+            setInterval(() => triggerSpasm(), 5000);
+        }
+
+        function showTab(n) {
+            document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
+            document.querySelectorAll('.tab-btn').forEach(el => el.classList.remove('active'));
+            document.getElementById('tab' + n).classList.add('active');
+            event.target.classList.add('active');
+        }
+
+        function triggerSpasm() {
+            for (const [id, pointsStr] of Object.entries(originalPolygons)) {
+                const el = document.getElementById(id); if (!el) continue;
+                el.setAttribute('points', pointsStr.split(' ').map(p => { const [x, y] = p.split(',').map(Number); return `${(x + (Math.random()-0.5)*15).toFixed(1)},${(y + (Math.random()-0.5)*15).toFixed(1)}`; }).join(' '));
+            }
+            document.getElementById('vigilante').style.filter = 'hue-rotate(90deg) scale(1.05)';
+            setTimeout(() => {
+                for (const [id, pointsStr] of Object.entries(originalPolygons)) document.getElementById(id).setAttribute('points', pointsStr);
+                document.getElementById('vigilante').style.filter = '';
+            }, 500);
+        }
+
+        function checkAnswer() {
+            const val = document.getElementById('arg-input').value.trim().toLowerCase();
+            // Permite el string en letras (ROT13) o el string de símbolos
+            if (val === "gur_rlrf_xrrc_jngpuvat" || val === "☿⌖☉╳☉☰☉✧╳✶☉☉△╳☲✦☿◇⌖◉☊⌬") {
+                triggerEldritchEvent();
+            } else {
+                document.body.classList.add('shake'); setTimeout(() => document.body.classList.remove('shake'), 250);
+            }
+        }
+
+        function triggerEldritchEvent() {
+            document.getElementById('terminal').style.display = 'none';
+            playScreechEffect();
+            document.getElementById('vigilante').classList.add('zoom-in');
+            const overlay = document.getElementById('speaking-overlay');
+            overlay.style.display = 'flex';
+            setTimeout(() => {
+                document.getElementById('speech-bubble').style.opacity = '1';
+                typeWriter("13 POSICIONES ADELANTE. CAMBIA LOS GUIONES POR ESPACIOS. TRADÚCELO.", 'typewriter-text', 0, 100, () => {
+                    document.getElementById('translation-container').style.display = 'flex';
+                });
+            }, 1000);
+        }
+
+        function typeWriter(text, id, i, speed, cb) {
+            if (i < text.length) {
+                document.getElementById(id).innerHTML += text.charAt(i);
+                playCreepyClick();
+                setTimeout(() => typeWriter(text, id, i + 1, speed, cb), speed);
+            } else if (cb) cb();
+        }
+
+        function verifyTranslation() {
+            const input = document.getElementById('translation-input').value.trim().toLowerCase();
+            const targetUrl = "https://thewatch3r123.github.io/THE_EYES_KEEP_WATCHING/";
+
+            if (input === "the eyes keep watching") {
+                playScreechEffect();
+                document.body.style.backgroundColor = "#ff0000";
+                // Añadimos un pequeño log por si necesitas depurar en la consola del navegador (F12)
+                console.log("Redirigiendo a:", targetUrl);
+                setTimeout(() => {
+                    window.location.href = targetUrl;
+                }, 1000);
+            } else {
+                // Feedback visual si la traducción es incorrecta
+                document.getElementById('translation-input').style.borderColor = "#ff0000";
+                setTimeout(() => document.getElementById('translation-input').style.borderColor = "", 500);
+            }
+        }
+    </script>
+</body>
+</html>
